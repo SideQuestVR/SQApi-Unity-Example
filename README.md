@@ -22,10 +22,10 @@ After app launch, check to see if sqApi.User is set to a value.
 When linking a sidequest user to your app:
      Call sqApi.GetLoginCode to retrieve the codeRequest.Code and codeRequest.VerificationUrl that a user can use to link their account
      
-     Poll every codeRequest.PollIntervalSeconds seconds and:
-         call CheckLoginCodeComplete.
-         If it completes with "false", the user has not yet completed the process, and polling should continue
-         If it completes with "true" and a user object, the user has successfully linked their account and their profile is saved locally.  polling should stop.
-         If OnError is invoked, either the short code login timed out or something has gone wrong. polling should stop, and an error should be shown to the user to retry.
+   Poll every codeRequest.PollIntervalSeconds seconds and:
+       call CheckLoginCodeComplete.
+       If it completes with "false", the user has not yet completed the process, and polling should continue
+       If it completes with "true" and a user object, the user has successfully linked their account and their profile is saved locally.  polling should stop.
+       If OnError is invoked, either the short code login timed out or something has gone wrong. polling should stop, and an error should be shown to the user to retry.
 
 To log a user out, call sqApi.Logout().  This will clear any persisted storage about the user and any short code logins.
