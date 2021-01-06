@@ -1,4 +1,4 @@
-#SideQuest API Unity Example
+# SideQuest API Unity Example
 This is example code of how to use the SideQuestVR API to link a SideQuest user's profile to a unity app via a short code login.
 
 To make use of this example, you will need an API client ID which will require an approved app listing on sidequestvr.com and/or access to the SideQuest test environment.
@@ -9,7 +9,7 @@ To get an API client ID:
 * Under the "Manage Listing" section, generate an API client ID in the "SideQuest API Credentials section"
 * Copy the client ID and paste it into the SQ_API_CLIENT_ID constant at the top of SqExample.cs
 
-##General workflow:
+## General workflow:
 Create a new instance of SqAppApiConfig with the appropriate api client key, persistent storage path, test mode flag, and optionally a specific filename to store data in
 Create a new singleton instance, shared throughout the application, of SqAppApi using the config
 
