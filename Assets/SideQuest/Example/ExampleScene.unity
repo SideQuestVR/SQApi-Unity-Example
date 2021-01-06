@@ -431,7 +431,7 @@ GameObject:
   - component: {fileID: 612195248}
   - component: {fileID: 612195247}
   m_Layer: 5
-  m_Name: Button
+  m_Name: GetCodeButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -556,7 +556,7 @@ GameObject:
   - component: {fileID: 880873801}
   - component: {fileID: 880873800}
   m_Layer: 5
-  m_Name: Button (1)
+  m_Name: LogOutButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -902,7 +902,7 @@ GameObject:
   - component: {fileID: 1033506012}
   - component: {fileID: 1033506011}
   m_Layer: 5
-  m_Name: Button (2)
+  m_Name: RefreshUserButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1181,7 +1181,7 @@ GameObject:
   - component: {fileID: 1265114775}
   - component: {fileID: 1265114774}
   m_Layer: 5
-  m_Name: Text (TMP)
+  m_Name: StatusText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1353,7 +1353,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1749532872}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 55f4dc0cfac6a5948865a8be47fe068d, type: 3}
+  m_Script: {fileID: 11500000, guid: e655102f7423e2c4db47ce817d6c6b10, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   CodeText: {fileID: 1265114774}

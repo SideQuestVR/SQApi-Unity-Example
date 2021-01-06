@@ -1,6 +1,9 @@
 #SideQuest API Unity Example
 This is example code of how to use the SideQuestVR API to link a SideQuest user's profile to a unity app via a short code login.
 
+This project will need TextMeshPro which is not included in the assets.
+This project also makes use of Newtonsoft JSON.NET which is included, however if you use this code in another project, assure you only have one copy of the JSON.NET library.
+
 To make use of this example, you will need an API client ID which will require an approved app listing on sidequestvr.com and/or access to the SideQuest test environment.
 For more information, check the SideQuest developer discord https://sdq.st/devdiscord or the primary Discord https://sdq.st/discord
 
