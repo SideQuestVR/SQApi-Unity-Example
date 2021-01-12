@@ -16,6 +16,27 @@ public class SqPersistentData
     /// </summary>
     public SqUser User { get; set; }
 
+    private List<SqUserAchievement> _UserAchievements = new List<SqUserAchievement>();
+
+    /// <summary>
+    /// The list of achievements the user has gained for the app
+    /// </summary>
+    public List<SqUserAchievement> UserAchievements
+    {
+        get
+        {
+            if (_UserAchievements == null)
+            {
+                _UserAchievements = new List<SqUserAchievement>();
+            }
+            return _UserAchievements;
+        }
+        set
+        {
+            _UserAchievements = value;
+        }
+    }
+
     /// <summary>
     /// The currently logged in user's API token information (null if no user logged in)
     /// </summary>
@@ -35,25 +56,25 @@ public class SqTokenInfo
     /// <summary>
     /// The refresh token used to generate new access tokens
     /// </summary>
-    [JsonProperty("refreshToken")]
+    [JsonProperty("refresh_token")]
     public string RefreshToken { get; set; }
 
     /// <summary>
     /// The Bearer access token used to authenticate API requests
     /// </summary>
-    [JsonProperty("accessToken")]
+    [JsonProperty("access_token")]
     public string AccessToken { get; set; }
 
     /// <summary>
     /// The time at which the access token will expire and need to be refreshed using the refresh token
     /// </summary>
-    [JsonProperty("accessTokenExpiresAt")]
+    [JsonProperty("access_token_expires_at")]
     public DateTimeOffset? AccessTokenExpiresAt { get; set; }
 
     /// <summary>
     /// The time at which the refresh token will expire
     /// </summary>
-    [JsonProperty("refreshTokenExpiresAt")]
+    [JsonProperty("refresh_token_expires_at")]
     public DateTimeOffset? RefreshTokenExpiresAt { get; set; }
 
     /// <summary>
@@ -66,13 +87,13 @@ public class SqTokenInfo
     /// The user id the token was issued for
     /// </summary>
     [JsonProperty("users_id")]
-    public int UserId { get; set; }
+    public long UserId { get; set; }
 
     /// <summary>
     /// The app id of the client this token was issued for
     /// </summary>
     [JsonProperty("apps_id")]
-    public int AppId { get; set; }
+    public long AppId { get; set; }
 
     /// <summary>
     /// The list of scopes granted by the user when approving the app and generating the token
@@ -80,8 +101,6 @@ public class SqTokenInfo
     [JsonProperty("scopes")]
     public List<string> GrantedScopes { get; set; } = new List<string>();
 }
-
-
 
 /// <summary>
 /// A list of scopes that can be requested for a user
@@ -92,6 +111,16 @@ public static class SqAuthScopes
     /// Basic user profile information excluding email address
     /// </summary>
     public static readonly string ReadBasicProfile = "user.basic_profile.read";
+
+    /// <summary>
+    /// Allows reading of a user's achievements for the app
+    /// </summary>
+    public static readonly string ReadAppAchievements = "user.app_achievements.read";
+
+    /// <summary>
+    /// Allows setting of a user's achievements for the app
+    /// </summary>
+    public static readonly string WriteAppAchievements = "user.app_achievements.write";
 }
 
 /// <summary>
@@ -139,7 +168,7 @@ public class SqUser
     /// The user's identifier
     /// </summary>
     [JsonProperty("users_id")]
-    public int UserId { get; set; }
+    public long UserId { get; set; }
 
     /// <summary>
     /// Display name
@@ -253,4 +282,59 @@ public class SqAppApiConfig
     /// The client ID retrieved from the sidequest app management for your app
     /// </summary>
     public string ClientId { get; private set; }
+}
+
+public class SqUserAchievement : SqAchievement
+{
+    /// <summary>
+    /// The ID of the user that achieved
+    /// </summary>
+    [JsonProperty("users_id")]
+    public long UserId { get; set; }
+
+    /// <summary>
+    /// The timestamp when the user unlocked the achievement
+    /// </summary>
+    [JsonProperty("unlocked_at")]
+    public DateTimeOffset UserUnlockedAt { get; set; }
+}
+
+public class SqAchievement
+{
+    /// <summary>
+    /// The ID of the app the achievement is for
+    /// </summary>
+    [JsonProperty("apps_id")]
+    public long AppId { get; set; }
+
+    /// <summary>
+    /// The string identifier for the achievement (defined in SQ app management dashboard when achievement was created)
+    /// </summary>
+    [JsonProperty("achievement_identifier")]
+    public string AchievementId { get; set; }
+
+    /// <summary>
+    /// The display name of the achievement
+    /// </summary>
+    [JsonProperty("name")]
+    public string Name { get; set; }
+
+    /// <summary>
+    /// The URL of the larger image associated with the achievement
+    /// </summary>
+    [JsonProperty("image")]
+    public string ImageUrl { get; set; }
+
+    /// <summary>
+    /// The URL of the icon image associated with the achievement
+    /// </summary>
+    [JsonProperty("icon")]
+    public string IconUrl { get; set; }
+
+    /// <summary>
+    /// The timestamp when the achievement definition was created (NOT when the user got it)
+    /// </summary>
+    [JsonProperty("created_at")]
+    public DateTimeOffset AchievementCreatedAt { get; set; }
+
 }

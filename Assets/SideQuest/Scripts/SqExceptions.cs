@@ -13,13 +13,16 @@ public class SqApiException : Exception
     {
         HttpCode = httpCode;
     }
+
     public SqApiException(string message, Exception inner = null) : base(message, inner)
     {
     }
+
     public SqApiException(int httpCode, string message, Exception inner = null) : base(message, inner)
     {
         HttpCode = httpCode;
     }
+
     public SqApiException() { }
 
     /// <summary>
@@ -45,4 +48,14 @@ public class SqApiAuthException : SqApiException
     public SqApiAuthException(int httpCode) : base(httpCode) { }
     public SqApiAuthException(string message, Exception inner = null) : base(message, inner) { }
     public SqApiAuthException(int httpCode, string message, Exception inner = null) : base(httpCode, message, inner) { }
+}
+
+/// <summary>
+/// Exception raised when an object being created already exists on the server
+/// </summary>
+public class SqAlreadyExistsException : SqApiException
+{
+    public SqAlreadyExistsException(int httpCode) : base(httpCode) { }
+    public SqAlreadyExistsException(string message, Exception inner = null) : base(message, inner) { }
+    public SqAlreadyExistsException(int httpCode, string message, Exception inner = null) : base(httpCode, message, inner) { }
 }

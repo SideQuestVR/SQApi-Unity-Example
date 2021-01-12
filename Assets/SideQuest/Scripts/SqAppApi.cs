@@ -38,6 +38,17 @@ public class SqAppApi
     }
 
     /// <summary>
+    /// Get a list of the currently logged in sidequest user's achievements
+    /// </summary>
+    public List<SqUserAchievement> UserAchievements
+    {
+        get
+        {
+            return Data.UserAchievements;
+        }
+    }
+
+    /// <summary>
     /// The currently active short code information or null if no short code login is in progress
     /// </summary>
     public SqLoginCode CurrentLoginCode
@@ -62,6 +73,8 @@ public class SqAppApi
         Data.Token = null;
         Data.User = null;
         Data.LoginCode = null;
+        Data.UserAchievements = null;
+
         SaveData();
         if (!wasUserNull)
         {
@@ -88,7 +101,7 @@ public class SqAppApi
     /// <param name="OnError">Function invoked with the exception when the call fails</param>
     public IEnumerator GetLoginCode(Action<SqLoginCode> OnCompleted, Action<Exception> OnError)
     {
-        yield return GetLoginCode(new string[] { SqAuthScopes.ReadBasicProfile }, OnCompleted, OnError);
+        yield return GetLoginCode(new string[] { SqAuthScopes.ReadBasicProfile, SqAuthScopes.ReadAppAchievements, SqAuthScopes.WriteAppAchievements }, OnCompleted, OnError);
     }
 
     /// <summary>
@@ -157,27 +170,172 @@ public class SqAppApi
             }
             Data.User = null;
             Data.Token = tok;
+            ex = null;
             yield return GetUserProfile((u) =>
             {
                 Data.User = u;
+            }, (e) =>
+            {
+                ex = e;
+
+            });
+            if (ex != null)
+            {
+                OnError?.Invoke(ex);
+            } else
+            {
                 Data.LoginCode = null;
+            
+                if (Data?.Token?.GrantedScopes?.Contains(SqAuthScopes.ReadAppAchievements) ?? false)
+                {
+                    yield return RefreshUserAchievements(c => { }, e => ex = e);
+                    if (ex != null)
+                    {
+                        OnError?.Invoke(new SqApiException("Unable to refresh achievements", ex));
+                        yield break;
+                    }
+                }
                 SaveData();
                 OnCompleted?.Invoke(true, Data.User);
-            }, (e) =>
+            }
+        }
+        else
+        {
+            OnError?.Invoke(ex);
+        }
+    }
+
+    /// <summary>
+    /// Refreshes the currently logged in user's profile
+    /// </summary>
+    /// <param name="OnCompleted">Function invoked with the refreshed user's profile</param>
+    /// <param name="OnError">Function invoked with the provoking exception when something goes wrong</param>
+    public IEnumerator RefreshUserProfile(Action<SqUser> OnCompleted, Action<Exception> OnError)
+    {
+        SqUser user = null;
+        Exception ex = null;
+        yield return GetUserProfile((u) => user = u, e => ex = e);
+        if (ex != null)
+        {
+            OnError(ex);
+            yield break;
+        }
+        
+        if (user?.UserId != Data.Token?.UserId)
+        {
+            OnError?.Invoke(new SqApiException("User refreshed data does not match user token ID!"));
+            yield break;
+        }
+        Data.User = user;
+        SaveData();
+        if (Data?.Token?.GrantedScopes?.Contains(SqAuthScopes.ReadAppAchievements)??false)
+        {
+            yield return RefreshUserAchievements(c => { }, e => ex = e);
+            if (ex != null)
+            {
+                OnError?.Invoke(new SqApiException("Unable to refresh achievements", ex));
+                yield break;
+            }
+        }
+        OnCompleted?.Invoke(user);        
+    }
+
+    /// <summary>
+    /// Refreshes and returns a list of achievements a user has completed for the app
+    /// </summary>
+    /// <param name="OnCompleted">Function invoked with the refreshed list of user achievements</param>
+    /// <param name="OnError">Function invoked with the provoking exception when something goes wrong</param>
+    public IEnumerator RefreshUserAchievements(Action<List<SqUserAchievement>> OnCompleted, Action<Exception> OnError)
+    {
+        List<SqUserAchievement> achievements = null;
+        Exception ex = null;
+        yield return JsonGet<List<SqUserAchievement>>("/v2/users/me/apps/me/achievements",
+            (a) => achievements = a,
+            (e) => ex = e,
+            true);
+        if (ex != null)
+        {
+            OnError?.Invoke(ex);
+            yield break;
+        } else
+        {
+            Data.UserAchievements = achievements;
+            SaveData();
+            OnCompleted?.Invoke(achievements);
+        }
+    }
+
+    /// <summary>
+    /// Refreshes and returns a list of available app achievements that the user may or may not have completed
+    /// </summary>
+    /// <param name="OnCompleted">Function invoked with the refreshed list of user achievements</param>
+    /// <param name="OnError">Function invoked with the provoking exception when something goes wrong</param>
+    public IEnumerator GetAppAchievements(Action<List<SqAchievement>> OnCompleted, Action<Exception> OnError)
+    {
+        List<SqAchievement> achievements = null;
+        Exception ex = null;
+        yield return JsonGet<List<SqAchievement>>("/v2/apps/me/achievements",
+            (a) => achievements = a,
+            (e) => ex = e,
+            true);
+        if (ex != null)
+        {
+            OnError?.Invoke(ex);
+            yield break;
+        }
+        else
+        {
+             OnCompleted?.Invoke(achievements);
+        }
+    }
+
+    /// <summary>
+    /// Adds an achievement to a user, optionally throwing an exception if it already exists
+    /// </summary>
+    /// <param name="achievementID">The ID of the achievement to add to the user</param>
+    /// <param name="OnCompleted">Function invoked with the resulting user achievement when adding the achievement to the user has succeeded
+    ///                 NOTE: if the user token does not have achievement read scope, null will be returned</param>
+    /// <param name="OnError">Function invoked with the provoking exception when something goes wrong.</param>
+    /// <param name="throwIfAlreadyExists">If true and an achievement is being added to a user that</param>
+    /// <returns></returns>
+    public IEnumerator AddUserAchievement(string achievementID, Action<SqUserAchievement> OnCompleted, Action<Exception> OnError, bool throwIfAlreadyExists = false)
+    {
+        Exception ex = null;
+
+        yield return JsonPost<string>("/v2/users/me/apps/me/achievements", new { achievement_identifier = achievementID, achieved = true }, o =>
+            {
+            }, e => ex = e, true);
+        if (ex != null)
+        {
+            var apiex = ex as SqApiException;
+            if (!(apiex != null && apiex.HttpCode == 409 && !throwIfAlreadyExists))
+            {
+                OnError?.Invoke(ex);
+                yield break;
+            }
+        }
+        if (Data?.Token?.GrantedScopes?.Contains(SqAuthScopes.ReadAppAchievements) ?? false)
+        {
+            yield return RefreshUserAchievements(c =>
+            {
+                var found = c.FirstOrDefault(x => string.Compare(achievementID, x.AchievementId, true) == 0);
+                if (found == null)
+                {
+                    OnError?.Invoke(new SqApiException("User achievement was added, but was not returned from the server after being added"));
+                }
+                else
+                {
+                    OnCompleted(found);
+                }
+
+            }, e =>
             {
                 OnError?.Invoke(e);
             });
         }
         else
         {
-            ////TODO: remove. this is temporary until API bug is fixed
-            //if (ex is SqApiException && ((SqApiException)ex).HttpCode == 400)
-            //{
-            //    _lastLoginPoll = DateTime.Now;
-            //    OnCompleted?.Invoke(false, null);
-            //    yield break;
-            //}
-            OnError?.Invoke(ex);
+            OnCompleted?.Invoke(null);
         }
     }
 
@@ -197,31 +355,6 @@ public class SqAppApi
             _data = value;
         }
     }
-
-
-    /// <summary>
-    /// Refreshes the currently logged in user's profile
-    /// </summary>
-    /// <param name="OnCompleted">Function invoked with the refreshed user's profile</param>
-    /// <param name="OnError">Function invoked with the provoking exception when something goes wrong</param>
-    public IEnumerator RefreshUserProfile(Action<SqUser> OnCompleted, Action<Exception> OnError)
-    {
-        //todo: get user
-
-        yield return GetUserProfile((u) =>
-        {
-            if (u?.UserId != Data.Token?.UserId)
-            {
-                OnError?.Invoke(new SqApiException("User refreshed data does not match user token ID!"));
-                return;
-            }
-            Data.User = u;
-            SaveData();
-            OnCompleted(u);
-        }, OnError);
-    }
-
-
 
     private IEnumerator GetUserProfile(Action<SqUser> OnCompleted, Action<Exception> OnError)
     {

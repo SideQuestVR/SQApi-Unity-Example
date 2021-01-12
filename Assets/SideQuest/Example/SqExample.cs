@@ -1,17 +1,28 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class SqExample : MonoBehaviour
 {
 
-    private const string SQ_API_CLIENT_ID = "PASTE_CLIENT_ID_HERE";
+    private const string SQ_API_CLIENT_ID = "PUT_CLIENT_ID_HERE";
 
-    public TMPro.TextMeshProUGUI CodeText;
-    public GameObject GetCodeButton;
-    public GameObject LogOutButton;
-    public GameObject RefreshButton;
+    private const string SQ_ACHIEVEMENT_TO_GRANT = "PUT_ACHIEVEMENT_IDENTIFIER_HERE";
+
+    public TMPro.TextMeshProUGUI StatusText;
+
+    public TMPro.TextMeshProUGUI AvailableAchievementsText;
+    public TMPro.TextMeshProUGUI UserAchievementsText;
+
+    //public GameObject GetCodeButton;
+    //public GameObject LogOutButton;
+    //public GameObject RefreshButton;
+
+    public GameObject LoggedInVisibleContainer;
+    public GameObject LoggedOutVisibleContainer;
+
 
     SqAppApi sq;
 
@@ -35,14 +46,14 @@ public class SqExample : MonoBehaviour
 
     public void GetCodeClick()
     {
-        GetCodeButton.SetActive(false);
+        LoggedOutVisibleContainer.SetActive(false);
         //call GetLoginCode from the api to retrieve the short code a user should enter
         StartCoroutine(sq.GetLoginCode((code) =>
         {
             Debug.Log("SQ: Successfully got login short code from API");
             //When a code has been retrieved, the Code and the VerificationUrl returned from the API should
             //  be shown to the user
-            CodeText.text = $"Go to {code.VerificationUrl}\nput in {code.Code}";
+            StatusText.text = $"Go to {code.VerificationUrl}\nput in {code.Code}";
 
             //begin polling for completion of the short code login using the interval returned from the API
             StartPolling(code.PollIntervalSeconds);
@@ -50,8 +61,25 @@ public class SqExample : MonoBehaviour
             //if something goes wrong, details of what should be in the exception
             Debug.LogError("Failed to get code from API!");
             Debug.LogException(error);
-            GetCodeButton.SetActive(true);
+            LoggedOutVisibleContainer.SetActive(true);
         }));
+    }
+
+    public void GrantAchievement()
+    {
+        if (sq.User == null)
+        {
+            return;
+        }
+       
+        StartCoroutine(sq.AddUserAchievement(SQ_ACHIEVEMENT_TO_GRANT, a =>
+        {
+            UpdateAchievementDisplay();
+        }, e =>
+        {
+            Debug.LogError("Error adding user achievement");
+            Debug.LogException(e);
+        }, false));
     }
 
     private void StopPolling()
@@ -98,8 +126,8 @@ public class SqExample : MonoBehaviour
                 //when this happens, stop polling because the situation won't improve.
                 Debug.LogError("Exception while checking for login code completion");
                 Debug.LogException(ex);
-                CodeText.text = $"Failed: {ex.Message}";
-                GetCodeButton.SetActive(true);
+                StatusText.text = $"Failed: {ex.Message}";
+                LoggedOutVisibleContainer.SetActive(true);
                 StopPolling();
                 yield break;
             }
@@ -125,10 +153,60 @@ public class SqExample : MonoBehaviour
 
     private void LoginCompleted()
     {
-        GetCodeButton.SetActive(false);
-        CodeText.text = $"Logged in as: {sq.User.Name}";
-        LogOutButton.SetActive(true);
-        RefreshButton.SetActive(true);
+        LoggedOutVisibleContainer.SetActive(false);
+        StatusText.text = $"Logged in as: {sq.User.Name}";
+        LoggedInVisibleContainer.SetActive(true);
+        UpdateAchievementDisplay();
+    }
+    private List<SqAchievement> appAchievements = null;
+
+    private void UpdateAchievementDisplay()
+    {
+        if (sq.User == null)
+        {
+            UserAchievementsText.text = "";
+            AvailableAchievementsText.text = "";
+        } else
+        {
+            Action showAppAchievements = () =>
+            {
+                if (appAchievements == null)
+                {
+                    AvailableAchievementsText.text = "";
+                }
+                else
+                {
+                    var adisp = "App Achievements:\n";
+                    foreach (var ach in appAchievements)
+                    {
+                        adisp += $"{ach.AchievementId}\n";
+                    }
+                    AvailableAchievementsText.text = adisp;
+                }
+            };
+            if (appAchievements == null)
+            {
+                StartCoroutine(sq.GetAppAchievements(a =>
+                {
+                    appAchievements = a;
+                    showAppAchievements();
+                }, e =>
+                {
+                    Debug.LogError("Failed to refresh app achievements");
+                    Debug.LogException(e);
+                }));
+            } else
+            {
+                showAppAchievements();
+            }
+            var disp = "User Achievements:\n";
+            foreach (var ach in sq.UserAchievements)
+            {
+                disp += $"{ach.AchievementId}\n";
+            }
+            UserAchievementsText.text = disp;
+        }
+        
     }
 
     public void RefreshUser()
@@ -140,12 +218,14 @@ public class SqExample : MonoBehaviour
             StartCoroutine(sq.RefreshUserProfile((u) =>
             {
                 Debug.Log("User profile information has been refreshed from the API successfully");
-                CodeText.text = $"Logged in as: {sq.User.Name}";
+                StatusText.text = $"Logged in as: {sq.User.Name}";
+                UpdateAchievementDisplay();
             }, (e) =>
             {
                 Debug.LogError("Failed to refresh user");
                 Debug.LogException(e);
             }));
+
         }
     }
     private void SetLoginState()
@@ -155,12 +235,17 @@ public class SqExample : MonoBehaviour
             LoginCompleted();
         } else
         {
-            GetCodeButton.SetActive(true);
-            CodeText.text = "Push Button, Get Code";
-            LogOutButton.SetActive(false);
-            RefreshButton.SetActive(false);
+            LoggedOutVisibleContainer.SetActive(true);
+            StatusText.text = "Push Button, Get Code";
+            LoggedInVisibleContainer.SetActive(false);
         }
     }
+
+    private void OnDestroy()
+    {
+        StopPolling();
+    }
+
     Coroutine waitCoroutine;
 
 
